@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from datetime import datetime, date
@@ -228,7 +228,7 @@ async def health_check():
 @app.post("/api/metrics")
 async def record_metrics(
     metrics: BodyMetricsCreate,
-    authorization: str = Depends(lambda: None)
+    authorization: str = Header(None, alias="Authorization")
 ):
     user = get_current_user(authorization)
     client_id = user["id"]
@@ -256,7 +256,7 @@ async def get_client_metrics(
     client_id: str,
     page: int = 1,
     limit: int = 50,
-    authorization: str = Depends(lambda: None)
+    authorization: str = Header(None, alias="Authorization")
 ):
     user = get_current_user(authorization)
 
@@ -290,7 +290,7 @@ async def get_client_metrics(
 @app.get("/api/metrics/client/{client_id}/latest")
 async def get_latest_metrics(
     client_id: str,
-    authorization: str = Depends(lambda: None)
+    authorization: str = Header(None, alias="Authorization")
 ):
     user = get_current_user(authorization)
 
@@ -311,7 +311,7 @@ async def get_metrics_chart_data(
     client_id: str,
     metric: str = "weight_kg",
     days: int = 90,
-    authorization: str = Depends(lambda: None)
+    authorization: str = Header(None, alias="Authorization")
 ):
     user = get_current_user(authorization)
 
@@ -337,7 +337,7 @@ async def get_metrics_chart_data(
 @app.post("/api/workout-logs")
 async def log_workout(
     log: WorkoutLogCreate,
-    authorization: str = Depends(lambda: None)
+    authorization: str = Header(None, alias="Authorization")
 ):
     user = get_current_user(authorization)
     client_id = user["id"]
@@ -360,7 +360,7 @@ async def get_workout_logs(
     client_id: str,
     page: int = 1,
     limit: int = 20,
-    authorization: str = Depends(lambda: None)
+    authorization: str = Header(None, alias="Authorization")
 ):
     user = get_current_user(authorization)
 
@@ -393,7 +393,7 @@ async def get_workout_logs(
 @app.get("/api/workout-logs/{log_id}")
 async def get_workout_log(
     log_id: str,
-    authorization: str = Depends(lambda: None)
+    authorization: str = Header(None, alias="Authorization")
 ):
     get_current_user(authorization)
 
@@ -411,7 +411,7 @@ async def get_workout_log(
 @app.post("/api/health-records")
 async def add_health_record(
     record: HealthRecordCreate,
-    authorization: str = Depends(lambda: None)
+    authorization: str = Header(None, alias="Authorization")
 ):
     user = get_current_user(authorization)
     client_id = user["id"]
@@ -430,7 +430,7 @@ async def add_health_record(
 @app.get("/api/health-records/client/{client_id}")
 async def get_health_records(
     client_id: str,
-    authorization: str = Depends(lambda: None)
+    authorization: str = Header(None, alias="Authorization")
 ):
     user = get_current_user(authorization)
 
@@ -449,7 +449,7 @@ async def get_health_records(
 @app.get("/api/analytics/client/{client_id}")
 async def get_client_analytics(
     client_id: str,
-    authorization: str = Depends(lambda: None)
+    authorization: str = Header(None, alias="Authorization")
 ):
     user = get_current_user(authorization)
 
@@ -496,7 +496,7 @@ async def get_client_analytics(
 @app.get("/api/achievements/client/{client_id}")
 async def get_achievements(
     client_id: str,
-    authorization: str = Depends(lambda: None)
+    authorization: str = Header(None, alias="Authorization")
 ):
     user = get_current_user(authorization)
 
