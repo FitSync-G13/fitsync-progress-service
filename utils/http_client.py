@@ -15,7 +15,7 @@ async def validate_user(user_id: str, token: str):
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{USER_SERVICE_URL}/api/users/{user_id}",
-                headers={"Authorization": f"Bearer {token}"},
+                headers={"Authorization": token if token.startswith("Bearer ") else f"Bearer {token}"},
                 timeout=5.0
             )
             response.raise_for_status()
@@ -35,7 +35,7 @@ async def get_booking_details(booking_id: str, token: str):
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{SCHEDULE_SERVICE_URL}/api/bookings/{booking_id}",
-                headers={"Authorization": f"Bearer {token}"},
+                headers={"Authorization": token if token.startswith("Bearer ") else f"Bearer {token}"},
                 timeout=5.0
             )
             response.raise_for_status()
@@ -51,7 +51,7 @@ async def get_program_details(program_id: str, token: str):
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{TRAINING_SERVICE_URL}/api/programs/{program_id}",
-                headers={"Authorization": f"Bearer {token}"},
+                headers={"Authorization": token if token.startswith("Bearer ") else f"Bearer {token}"},
                 timeout=5.0
             )
             response.raise_for_status()
