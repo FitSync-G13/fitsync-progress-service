@@ -11,6 +11,11 @@ import os
 import json
 import logging
 from jose import JWTError, jwt
+import asyncio
+import sys
+sys.path.append(os.path.dirname(__file__))
+from utils.http_client import validate_user, get_booking_details
+from utils.event_publisher import publish_achievement_earned, publish_milestone_reached, publish_progress_updated
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("progress-service")
@@ -178,6 +183,84 @@ async def publish_event(channel: str, data: dict):
     except Exception as e:
         logger.error(f"Failed to publish event: {e}")
 
+# Event Handlers
+async def handle_booking_completed(event_data: dict):
+    """Auto-create workout log when booking is completed"""
+    try:
+        data = event_data.get("data", {})
+        logger.info(f"Handling booking.completed event for booking {data.get('booking_id')}")
+
+        async with db_pool.acquire() as conn:
+            # Check if workout log already exists for this booking
+            existing = await conn.fetchval(
+                "SELECT id FROM workout_logs WHERE booking_id = $1",
+                data.get("booking_id")
+            )
+
+            if existing:
+                logger.info(f"Workout log already exists for booking {data.get('booking_id')}")
+                return
+
+            # Create workout log stub
+            await conn.execute("""
+                INSERT INTO workout_logs (client_id, booking_id, workout_date,
+                                         exercises_completed, total_duration_minutes, trainer_notes)
+                VALUES ($1, $2, $3, $4, $5, $6)
+            """, data.get("client_id"), data.get("booking_id"),
+                 data.get("workout_date"), json.dumps([]),
+                 data.get("duration_minutes", 60), data.get("trainer_notes", ""))
+
+            logger.info(f"Auto-created workout log for booking {data.get('booking_id')}")
+    except Exception as e:
+        logger.error(f"Error handling booking.completed event: {e}")
+
+
+async def handle_program_completed(event_data: dict):
+    """Award achievement when program is completed"""
+    try:
+        data = event_data.get("data", {})
+        logger.info(f"Handling program.completed event for program {data.get('program_id')}")
+
+        async with db_pool.acquire() as conn:
+            # Award program completion achievement
+            result = await conn.fetchrow("""
+                INSERT INTO achievements (client_id, achievement_type, title, description, badge_icon)
+                VALUES ($1, 'program_completion', $2, $3, 'program_complete.png')
+                RETURNING *
+            """, data.get("client_id"),
+                 "Completed Training Program",
+                 "You've successfully completed your training program!")
+
+            if result:
+                # Publish achievement earned event
+                await publish_achievement_earned(redis_client, dict(result))
+                logger.info(f"Achievement awarded to client {data.get('client_id')}")
+    except Exception as e:
+        logger.error(f"Error handling program.completed event: {e}")
+
+
+async def subscribe_to_events():
+    """Subscribe to Redis events"""
+    try:
+        pubsub = redis_client.pubsub()
+        await pubsub.subscribe('booking.completed', 'program.completed')
+        logger.info("Subscribed to Redis events: booking.completed, program.completed")
+
+        async for message in pubsub.listen():
+            if message['type'] == 'message':
+                try:
+                    event_data = json.loads(message['data'])
+                    channel = message['channel']
+
+                    if channel == 'booking.completed':
+                        await handle_booking_completed(event_data)
+                    elif channel == 'program.completed':
+                        await handle_program_completed(event_data)
+                except Exception as e:
+                    logger.error(f"Error processing event from {message.get('channel')}: {e}")
+    except Exception as e:
+        logger.error(f"Event subscription error: {e}")
+
 # Auth
 def get_current_user(authorization: Optional[str] = None):
     if not authorization or not authorization.startswith("Bearer "):
@@ -196,7 +279,19 @@ def get_current_user(authorization: Optional[str] = None):
 async def lifespan(app: FastAPI):
     await init_db()
     await init_redis()
+
+    # Start event subscription in background
+    subscription_task = asyncio.create_task(subscribe_to_events())
+
     yield
+
+    # Cancel subscription task on shutdown
+    subscription_task.cancel()
+    try:
+        await subscription_task
+    except asyncio.CancelledError:
+        pass
+
     await close_db()
     await close_redis()
 
