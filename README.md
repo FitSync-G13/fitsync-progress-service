@@ -101,6 +101,108 @@ Service runs on http://localhost:8004
 - `GET /api/progress/analytics` - Get analytics data
 - `GET /api/progress/goals` - Get goals
 
+## Testing
+
+**Current Status: 77 tests passing ✓**
+
+### Prerequisites
+
+Create and activate a virtual environment:
+```bash
+python3 -m venv test_venv
+source test_venv/bin/activate  # Linux/Mac
+# or
+test_venv\Scripts\activate     # Windows
+```
+
+Install test dependencies:
+```bash
+pip install pytest pytest-asyncio pytest-cov httpx fastapi pydantic python-jose asyncpg redis
+```
+
+### Running Tests
+
+Run all tests:
+```bash
+pytest tests/
+```
+
+Run tests with verbose output:
+```bash
+pytest tests/ -v
+```
+
+Run tests with coverage report:
+```bash
+pytest tests/ --cov=. --cov-report=term-missing
+```
+
+Generate HTML coverage report:
+```bash
+pytest tests/ --cov=. --cov-report=html
+open htmlcov/index.html
+```
+
+Run specific test file:
+```bash
+pytest tests/test_bmi_calculations.py -v
+pytest tests/test_analytics.py -v
+pytest tests/test_event_handlers.py -v
+pytest tests/test_http_client.py -v
+```
+
+Run tests matching a pattern:
+```bash
+pytest tests/ -k "bmi"
+pytest tests/ -k "analytics"
+pytest tests/ -k "event"
+```
+
+### Test Structure
+
+```
+tests/
+├── conftest.py              # Shared fixtures and test configuration
+├── test_bmi_calculations.py # BMI and body metrics logic (24 tests)
+├── test_analytics.py        # Analytics aggregation (23 tests)
+├── test_event_handlers.py   # Event handler logic (19 tests)
+└── test_http_client.py      # Inter-service HTTP client (11 tests)
+```
+
+### Test Categories
+
+1. **BMI Calculation Tests** (`test_bmi_calculations.py`) - 24 tests
+   - BMI formula calculations (normal, overweight, underweight, obese)
+   - BMI category classification
+   - BodyMetricsCreate model validation
+   - Weight progress calculations (loss, gain, trends)
+   - Chart data preparation and filtering
+
+2. **Analytics Tests** (`test_analytics.py`) - 23 tests
+   - Workout analytics (count, duration, calories, mood)
+   - Weekly analytics (streak tracking, averages)
+   - Progress analytics (weight trend, body fat, goal progress)
+   - Achievement counting and sorting
+   - Pagination calculations
+
+3. **Event Handler Tests** (`test_event_handlers.py`) - 19 tests
+   - booking.completed handler (creates workout log, skips duplicates)
+   - program.completed handler (creates achievement, publishes event)
+   - Event data parsing and JSON handling
+   - Event publishing (achievement.earned, milestone.reached, progress.updated)
+   - Achievement trigger conditions (milestones, streaks, PRs)
+
+4. **HTTP Client Tests** (`test_http_client.py`) - 11 tests
+   - User validation (success, not found, connection error, timeout)
+   - Booking details retrieval
+   - Program details retrieval
+   - Authorization header handling (Bearer prefix)
+
+### Coverage Target
+
+- Minimum coverage target: 70%
+- Focus on business logic: BMI calculations, analytics aggregation, event handlers
+
 ## Database Schema
 
 Main tables:
