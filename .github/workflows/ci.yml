@@ -7,13 +7,30 @@ on:
     branches: [ "main", "dev" ]
 
 permissions:
-  id-token: write          # Required for requesting the JWT (AWS OIDC)
-  contents: read           # Required for actions/checkout
-  security-events: write   # Required for uploading Trivy scan results
+  id-token: write
+  contents: read
+  pull-requests: write
+  security-events: write
+  checks: write
 
 jobs:
+  pr-quality-gates:
+    name: PR Quality Gates
+    if: github.event_name == 'pull_request'
+    uses: FitSync-G13/fitsync-cd-templates/.github/workflows/ci-pr-quality-gates.yml@master
+    with:
+      service_name: progress-service
+      ecr_repository: fitsync-progress-service
+      language: 'python'
+      python_version: '3.11'
+      install_command: 'pip install pytest pytest-asyncio pytest-cov httpx fastapi pydantic python-jose asyncpg redis'
+      test_command: 'pytest tests/ --cov=. --cov-report=term-missing'
+      run_e2e_tests: false
+      skip_security_scan: false
+
   build-test-push:
     uses: FitSync-G13/fitsync-cd-templates/.github/workflows/ci-test-build-push.yml@master
+    if: github.event_name == 'push'
     with:
       service_name: progress-service
       ecr_repository: fitsync-progress-service
