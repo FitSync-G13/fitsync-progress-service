@@ -208,7 +208,7 @@ tests/
 Main tables:
 - `body_metrics` - Body measurements and metrics
 - `workout_logs` - Workout completion logs
-- `goals` - User fitness goals
+- `goals`        - User fitness goals
 - `achievements` - Milestone achievements
 
 ## More Information
